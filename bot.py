@@ -49,3 +49,5 @@ async def start_test_callback(callback_query: types.CallbackQuery):
         "🧠 Тест сна начинается.\n\n"
         "Сейчас задам первый вопрос."
     )
+if __name__ == "__main__":
+    executor.start_polling(dp, skip_updates=True)
