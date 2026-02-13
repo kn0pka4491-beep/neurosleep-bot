@@ -1,4 +1,3 @@
-
 import os
 import logging
 from aiogram import Bot, Dispatcher, types
@@ -43,8 +42,7 @@ async def start(message: types.Message):
 
     await message.answer(
         "🌙 *Neuro Sleep Science*\n\n"
-        "Этот тест помогает оценить\n"
-        "*восстановительную функцию сна*.\n\n"
+        "Тест оценивает восстановительную функцию сна.\n\n"
         "⚠️ Не является диагнозом.\n\n"
         "Готовы начать?",
         reply_markup=keyboard,
@@ -58,154 +56,102 @@ async def start(message: types.Message):
 @dp.callback_query_handler(lambda c: c.data == "start_test")
 async def start_test(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
-    await state.reset_state()
+    await state.finish()
     await state.set_state(SleepTest.q1)
-    await ask_q1(callback.message)
+    await ask_question(callback.message, 1)
 
 
 # ======================
 # QUESTIONS
 # ======================
-async def ask_q1(message):
-    await message.answer(
-        "🕰 *Вопрос 1*\n\nСколько времени нужно, чтобы уснуть?",
-        reply_markup=kb("q1"),
-        parse_mode="Markdown"
-    )
+QUESTIONS = {
+    1: ("🕰 *Вопрос 1*\n\nСколько времени нужно, чтобы уснуть?",
+        ["😴 До 15 мин", "🙂 15–30 мин", "😕 30–60 мин", "😣 Более часа"]),
+    2: ("🌙 *Вопрос 2*\n\nКак часто просыпаешься ночью?",
+        ["🌙 Не просыпаюсь", "😴 1 раз", "😕 2–3 раза", "😣 4+ раз"]),
+    3: ("☀️ *Вопрос 3*\n\nКак чувствуешь себя утром?",
+        ["☀️ Отдохнувшим", "🙂 Нормально", "😕 Уставшим", "😣 Разбитым"]),
+    4: ("🕰 *Вопрос 4*\n\nВо сколько обычно ложишься спать?",
+        ["🕰 До 23:00", "🌙 23–00", "🌌 00–01", "🌃 После 01"]),
+    5: ("😴 *Вопрос 5*\n\nЕсть ли дневная сонливость?",
+        ["🙂 Почти нет", "😕 Иногда", "😴 Часто", "😣 Почти всегда"]),
+}
 
 
-async def ask_q2(message):
-    await message.answer(
-        "🌙 *Вопрос 2*\n\nКак часто просыпаешься ночью?",
-        reply_markup=kb("q2"),
-        parse_mode="Markdown"
-    )
-
-
-async def ask_q3(message):
-    await message.answer(
-        "☀️ *Вопрос 3*\n\nКак чувствуешь себя утром?",
-        reply_markup=kb("q3"),
-        parse_mode="Markdown"
-    )
-
-
-async def ask_q4(message):
-    await message.answer(
-        "🕰 *Вопрос 4*\n\nВо сколько обычно ложишься спать?",
-        reply_markup=kb("q4"),
-        parse_mode="Markdown"
-    )
-
-
-async def ask_q5(message):
-    keyboard = kb("q5")
-    keyboard.add(types.InlineKeyboardButton("callback_data="finish"))
-    await message.answer(
-        "😴 *Вопрос 5*\n\nЕсть ли дневная сонливость?",
-        reply_markup=keyboard,
-        parse_mode="Markdown"
-    )
-
-
-# ======================
-# KEYBOARDS
-# ======================
-def kb(prefix):
-    options = {
-        "q1": ["😴 До 15 мин", "🙂 15–30 мин", "😕 30–60 мин", "😣 > часа"],
-        "q2": ["🌙 Не просыпаюсь", "😴 1 раз", "😕 2–3 раза", "😣 ≥4 раз"],
-        "q3": ["☀️ Отдохнувшим", "🙂 Нормально", "😕 Уставшим", "😣 Разбитым"],
-        "q4": ["🕰 До 23:00", "🌙 23–00", "🌌 00–01", "🌃 После 01"],
-        "q5": ["🙂 Почти нет", "😕 Иногда", "😴 Часто", "😣 Почти всегда"],
-    }
-
+async def ask_question(message, number):
+    text, answers = QUESTIONS[number]
     keyboard = types.InlineKeyboardMarkup(row_width=1)
-    for i, text in enumerate(options[prefix]):
-        keyboard.add(types.InlineKeyboardButton(text, callback_data=f"{prefix}_{i}"))
-    return keyboard
+
+    for i, ans in enumerate(answers):
+        keyboard.add(
+            types.InlineKeyboardButton(ans, callback_data=f"q{number}_{i}")
+        )
+
+    await message.answer(text, reply_markup=keyboard, parse_mode="Markdown")
 
 
 # ======================
-# ANSWERS
+# ANSWERS HANDLER
 # ======================
-@dp.callback_query_handler(lambda c: c.data.startswith("q"), state="*")
+@dp.callback_query_handler(lambda c: c.data.startswith("q"))
 async def process_answer(callback: types.CallbackQuery, state: FSMContext):
-    prefix, value = callback.data.split("_")
-    await state.update_data({prefix: int(value)})
     await callback.answer()
 
-    if prefix == "q1":
-        await state.set_state(SleepTest.q2)
-        await ask_q2(callback.message)
+    q, value = callback.data.split("_")
+    question_number = int(q[1])
 
-    elif prefix == "q2":
-        await state.set_state(SleepTest.q3)
-        await ask_q3(callback.message)
+    await state.update_data({q: int(value)})
 
-    elif prefix == "q3":
-        await state.set_state(SleepTest.q4)
-        await ask_q4(callback.message)
-
-    elif prefix == "q4":
-        await state.set_state(SleepTest.q5)
-        await ask_q5(callback.message)
-
-    elif prefix == "q5":
+    if question_number < 5:
+        await state.set_state(getattr(SleepTest, f"q{question_number + 1}"))
+        await ask_question(callback.message, question_number + 1)
+    else:
         await finish_test(callback, state)
-    }
-
-    if prefix in next_step:
-        new_state, func = next_step[prefix]
-        await state.set_state(new_state)
-        await func(callback.message)
 
 
 # ======================
-# FINISH
+# FINISH TEST
 # ======================
-@dp.callback_query_handler(lambda c: c.data == "finish", state=SleepTest.q5)
 async def finish_test(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     score = sum(data.values())
 
     if score <= 4:
-        level = "🟢 Физиологически сохранённый сон"
+        result = "🟢 *Физиологически сохранённый сон*"
     elif score <= 8:
-        level = "🟡 Пограничное состояние"
+        result = "🟡 *Пограничное состояние сна*"
     elif score <= 12:
-        level = "🟠 Функциональные нарушения сна"
+        result = "🟠 *Функциональные нарушения сна*"
     else:
-        level = "🔴 Высокий риск хронического нарушения"
+        result = "🔴 *Высокий риск хронического нарушения сна*"
 
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     keyboard.add(
-        types.InlineKeyboardButton("🔍 Разбор параметров сна", callback_data="details"),
         types.InlineKeyboardButton("🌙 Что можно улучшить", callback_data="improve"),
         types.InlineKeyboardButton("🔁 Пройти тест снова", callback_data="start_test"),
+        types.InlineKeyboardButton("📘 Читать канал", url=CHANNEL_URL),
     )
 
     await callback.message.answer(
         f"🧠 *Результат теста сна*\n\n"
-        f"{level}\n\n"
+        f"{result}\n\n"
         "ℹ️ Это ориентир, а не диагноз.",
         reply_markup=keyboard,
         parse_mode="Markdown"
     )
 
     await state.finish()
-    await callback.answer()
 
 
 # ======================
-# EXTRA
+# IMPROVE
 # ======================
 @dp.callback_query_handler(lambda c: c.data == "improve")
 async def improve(callback: types.CallbackQuery):
     await callback.answer()
     await callback.message.answer(
         "🌙 *Что улучшает сон уже сегодня:*\n\n"
-        "• 🕰 стабильный режим\n"
+        "• 🕰 стабильное время сна\n"
         "• 📵 без экранов за 60 мин\n"
         "• ☀️ утренний свет\n"
         "• 🚶 движение днём",
