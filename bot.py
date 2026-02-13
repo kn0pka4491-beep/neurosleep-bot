@@ -170,33 +170,68 @@ async def ask_q5(message):
         reply_markup=keyboard,
         parse_mode="Markdown"
     )
+@dp.callback_query_handler(lambda c: c.data == "finish_test", state="*")
+async def finish_test(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
 
+    q1 = data.get("q1", 0)
+    q2 = data.get("q2", 0)
+    q3 = data.get("q3", 0)
+    q4 = data.get("q4", 0)
+    q5 = data.get("q5", 0)
+
+    score = q1 + q2 + q3 + q4 + q5
+
+    if score <= 4:
+        result_text = (
+            "🟢 *Физиологически сохранённый сон*\n\n"
+            "Сон выполняет восстановительную функцию.\n"
+            "Нервная система хорошо справляется с нагрузкой.\n\n"
+            "Даже при стрессе сон остаётся опорным механизмом восстановления."
+        )
+    elif score <= 8:
+        result_text = (
+            "🟡 *Пограничное состояние сна*\n\n"
+            "Сон в целом сохранён, но есть признаки перегрузки.\n\n"
+            "Часто связано со стрессом, режимом или вечерней стимуляцией.\n"
+            "На этом этапе мягкая коррекция даёт максимальный эффект."
+        )
+    elif score <= 12:
+        result_text = (
+            "🟠 *Выраженные функциональные нарушения сна*\n\n"
+            "Сон не всегда выполняет восстановительную функцию.\n\n"
+            "Возможны поверхностный сон, утренняя усталость,\n"
+            "снижение концентрации днём."
+        )
+    else:
+        result_text = (
+            "🔴 *Высокий риск хронического нарушения сна*\n\n"
+            "Сон, вероятно, не даёт полноценного восстановления.\n\n"
+            "Это может отражаться на настроении, энергии и устойчивости к стрессу.\n"
+            "Рекомендуется внимательное отношение к режиму сна."
+        )
+
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    keyboard.add(
+        types.InlineKeyboardButton("🔍 Разбор параметров сна", callback_data="details_menu"),
+        types.InlineKeyboardButton("🌙 Что можно улучшить", callback_data="improve_sleep"),
+        types.InlineKeyboardButton("🔁 Повторить тест через 7 дней", callback_data="repeat_test")
+    )
+
+    await callback.message.answer(
+        f"🧠 *Результат теста сна*\n\n"
+        f"{result_text}\n\n"
+        "ℹ️ Это не диагноз, а ориентир для понимания состояния сна.",
+        reply_markup=keyboard,
+        parse_mode="Markdown"
+    )
+
+    await callback.answer()
+    await state.finish()
 
 # ======================
 # FINISH TEST
 # ======================
-@dp.callback_query_handler(lambda c: c.data.startswith("q5_"), state=SleepTest.q5)
-async def finish(callback: types.CallbackQuery, state: FSMContext):
-    await callback.answer()
-    await state.update_data(q5=int(callback.data.split("_")[1]))
-
-    data = await state.get_data()
-    score = sum(data.values())
-
-    if score <= 4:
-        result = "🟢 Сон близок к физиологической норме"
-        level = "green"
-    elif score <= 8:
-        result = "🟡 Возможны умеренные нарушения сна"
-        level = "yellow"
-    elif score <= 12:
-        result = "🟠 Сон может быть фрагментирован"
-        level = "orange"
-    else:
-        result = "🔴 Высокая вероятность хронического нарушения сна"
-        level = "red"
-
-    await state.update_data(result_level=level)
 
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     keyboard.add(
