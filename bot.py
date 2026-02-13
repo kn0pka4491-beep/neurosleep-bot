@@ -1,3 +1,4 @@
+
 import os
 import logging
 from aiogram import Bot, Dispatcher, types
@@ -13,8 +14,7 @@ if not TOKEN:
     raise ValueError("BOT_TOKEN is not set")
 
 bot = Bot(token=TOKEN)
-storage = MemoryStorage()
-dp = Dispatcher(bot, storage=storage)
+dp = Dispatcher(bot, storage=MemoryStorage())
 
 CHANNEL_URL = "https://t.me/neuro_sleep_science"
 
@@ -44,9 +44,9 @@ async def start(message: types.Message):
     await message.answer(
         "🌙 *Neuro Sleep Science*\n\n"
         "Этот тест помогает оценить\n"
-        "*структуру и восстановительную функцию сна*.\n\n"
+        "*восстановительную функцию сна*.\n\n"
         "⚠️ Не является диагнозом.\n\n"
-        "Начнём? 👇",
+        "Готовы начать?",
         reply_markup=keyboard,
         parse_mode="Markdown"
     )
@@ -58,6 +58,7 @@ async def start(message: types.Message):
 @dp.callback_query_handler(lambda c: c.data == "start_test")
 async def start_test(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
+    await state.reset_state()
     await state.set_state(SleepTest.q1)
     await ask_q1(callback.message)
 
@@ -66,223 +67,135 @@ async def start_test(callback: types.CallbackQuery, state: FSMContext):
 # QUESTIONS
 # ======================
 async def ask_q1(message):
-    keyboard = types.InlineKeyboardMarkup(row_width=1)
-    keyboard.add(
-        types.InlineKeyboardButton("😴 До 15 минут", callback_data="q1_0"),
-        types.InlineKeyboardButton("🙂 15–30 минут", callback_data="q1_1"),
-        types.InlineKeyboardButton("😕 30–60 минут", callback_data="q1_2"),
-        types.InlineKeyboardButton("😣 Больше часа", callback_data="q1_3"),
-    )
     await message.answer(
-        "🕰 *Вопрос 1*\n\nСколько времени тебе обычно нужно, чтобы уснуть?",
-        reply_markup=keyboard,
+        "🕰 *Вопрос 1*\n\nСколько времени нужно, чтобы уснуть?",
+        reply_markup=kb("q1"),
         parse_mode="Markdown"
     )
-
-
-@dp.callback_query_handler(lambda c: c.data.startswith("q1_"), state=SleepTest.q1)
-async def q1(callback: types.CallbackQuery, state: FSMContext):
-    await callback.answer()
-    await state.update_data(q1=int(callback.data.split("_")[1]))
-    await state.set_state(SleepTest.q2)
-    await ask_q2(callback.message)
 
 
 async def ask_q2(message):
-    keyboard = types.InlineKeyboardMarkup(row_width=1)
-    keyboard.add(
-        types.InlineKeyboardButton("🌙 Не просыпаюсь", callback_data="q2_0"),
-        types.InlineKeyboardButton("😴 1 раз", callback_data="q2_1"),
-        types.InlineKeyboardButton("😕 2–3 раза", callback_data="q2_2"),
-        types.InlineKeyboardButton("😣 4 и более", callback_data="q2_3"),
-    )
     await message.answer(
-        "🌙 *Вопрос 2*\n\nКак часто ты просыпаешься ночью?",
-        reply_markup=keyboard,
+        "🌙 *Вопрос 2*\n\nКак часто просыпаешься ночью?",
+        reply_markup=kb("q2"),
         parse_mode="Markdown"
     )
-
-
-@dp.callback_query_handler(lambda c: c.data.startswith("q2_"), state=SleepTest.q2)
-async def q2(callback: types.CallbackQuery, state: FSMContext):
-    await callback.answer()
-    await state.update_data(q2=int(callback.data.split("_")[1]))
-    await state.set_state(SleepTest.q3)
-    await ask_q3(callback.message)
 
 
 async def ask_q3(message):
-    keyboard = types.InlineKeyboardMarkup(row_width=1)
-    keyboard.add(
-        types.InlineKeyboardButton("☀️ Отдохнувшим", callback_data="q3_0"),
-        types.InlineKeyboardButton("🙂 Скорее нормально", callback_data="q3_1"),
-        types.InlineKeyboardButton("😕 Уставшим", callback_data="q3_2"),
-        types.InlineKeyboardButton("😣 Разбитым", callback_data="q3_3"),
-    )
     await message.answer(
-        "☀️ *Вопрос 3*\n\nКак ты обычно чувствуешь себя утром?",
-        reply_markup=keyboard,
+        "☀️ *Вопрос 3*\n\nКак чувствуешь себя утром?",
+        reply_markup=kb("q3"),
         parse_mode="Markdown"
     )
-
-
-@dp.callback_query_handler(lambda c: c.data.startswith("q3_"), state=SleepTest.q3)
-async def q3(callback: types.CallbackQuery, state: FSMContext):
-    await callback.answer()
-    await state.update_data(q3=int(callback.data.split("_")[1]))
-    await state.set_state(SleepTest.q4)
-    await ask_q4(callback.message)
 
 
 async def ask_q4(message):
-    keyboard = types.InlineKeyboardMarkup(row_width=1)
-    keyboard.add(
-        types.InlineKeyboardButton("🕰 До 23:00", callback_data="q4_0"),
-        types.InlineKeyboardButton("🌙 23:00–00:00", callback_data="q4_1"),
-        types.InlineKeyboardButton("🌌 00:00–01:00", callback_data="q4_2"),
-        types.InlineKeyboardButton("🌃 После 01:00", callback_data="q4_3"),
-    )
     await message.answer(
-        "🕰 *Вопрос 4*\n\nВо сколько ты обычно ложишься спать?",
-        reply_markup=keyboard,
+        "🕰 *Вопрос 4*\n\nВо сколько обычно ложишься спать?",
+        reply_markup=kb("q4"),
         parse_mode="Markdown"
     )
-
-
-@dp.callback_query_handler(lambda c: c.data.startswith("q4_"), state=SleepTest.q4)
-async def q4(callback: types.CallbackQuery, state: FSMContext):
-    await callback.answer()
-    await state.update_data(q4=int(callback.data.split("_")[1]))
-    await state.set_state(SleepTest.q5)
-    await ask_q5(callback.message)
 
 
 async def ask_q5(message):
-    keyboard = types.InlineKeyboardMarkup(row_width=1)
-    keyboard.add(
-        types.InlineKeyboardButton("🙂 Почти никогда", callback_data="q5_0"),
-        types.InlineKeyboardButton("😕 Иногда", callback_data="q5_1"),
-        types.InlineKeyboardButton("😴 Часто", callback_data="q5_2"),
-        types.InlineKeyboardButton("😣 Почти каждый день", callback_data="q5_3"),
-    )
+    keyboard = kb("q5")
+    keyboard.add(types.InlineKeyboardButton("✅ Завершить тест", callback_data="finish"))
     await message.answer(
-        "😴 *Вопрос 5*\n\nБывает ли у тебя дневная сонливость?",
+        "😴 *Вопрос 5*\n\nЕсть ли дневная сонливость?",
         reply_markup=keyboard,
         parse_mode="Markdown"
     )
-@dp.callback_query_handler(lambda c: c.data == "finish_test", state="*")
-async def finish_test(callback: types.CallbackQuery, state: FSMContext):
+
+
+# ======================
+# KEYBOARDS
+# ======================
+def kb(prefix):
+    options = {
+        "q1": ["😴 До 15 мин", "🙂 15–30 мин", "😕 30–60 мин", "😣 > часа"],
+        "q2": ["🌙 Не просыпаюсь", "😴 1 раз", "😕 2–3 раза", "😣 ≥4 раз"],
+        "q3": ["☀️ Отдохнувшим", "🙂 Нормально", "😕 Уставшим", "😣 Разбитым"],
+        "q4": ["🕰 До 23:00", "🌙 23–00", "🌌 00–01", "🌃 После 01"],
+        "q5": ["🙂 Почти нет", "😕 Иногда", "😴 Часто", "😣 Почти всегда"],
+    }
+
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    for i, text in enumerate(options[prefix]):
+        keyboard.add(types.InlineKeyboardButton(text, callback_data=f"{prefix}_{i}"))
+    return keyboard
+
+
+# ======================
+# ANSWERS
+# ======================
+@dp.callback_query_handler(lambda c: c.data.startswith("q"), state="*")
+async def process_answer(callback: types.CallbackQuery, state: FSMContext):
+    prefix, value = callback.data.split("_")
+    await state.update_data({prefix: int(value)})
+    await callback.answer()
+
+    next_step = {
+        "q1": (SleepTest.q2, ask_q2),
+        "q2": (SleepTest.q3, ask_q3),
+        "q3": (SleepTest.q4, ask_q4),
+        "q4": (SleepTest.q5, ask_q5),
+    }
+
+    if prefix in next_step:
+        new_state, func = next_step[prefix]
+        await state.set_state(new_state)
+        await func(callback.message)
+
+
+# ======================
+# FINISH
+# ======================
+@dp.callback_query_handler(lambda c: c.data == "finish", state=SleepTest.q5)
+async def finish(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
-
-    q1 = data.get("q1", 0)
-    q2 = data.get("q2", 0)
-    q3 = data.get("q3", 0)
-    q4 = data.get("q4", 0)
-    q5 = data.get("q5", 0)
-
-    score = q1 + q2 + q3 + q4 + q5
+    score = sum(data.values())
 
     if score <= 4:
-        result_text = (
-            "🟢 *Физиологически сохранённый сон*\n\n"
-            "Сон выполняет восстановительную функцию.\n"
-            "Нервная система хорошо справляется с нагрузкой.\n\n"
-            "Даже при стрессе сон остаётся опорным механизмом восстановления."
-        )
+        level = "🟢 Физиологически сохранённый сон"
     elif score <= 8:
-        result_text = (
-            "🟡 *Пограничное состояние сна*\n\n"
-            "Сон в целом сохранён, но есть признаки перегрузки.\n\n"
-            "Часто связано со стрессом, режимом или вечерней стимуляцией.\n"
-            "На этом этапе мягкая коррекция даёт максимальный эффект."
-        )
+        level = "🟡 Пограничное состояние"
     elif score <= 12:
-        result_text = (
-            "🟠 *Выраженные функциональные нарушения сна*\n\n"
-            "Сон не всегда выполняет восстановительную функцию.\n\n"
-            "Возможны поверхностный сон, утренняя усталость,\n"
-            "снижение концентрации днём."
-        )
+        level = "🟠 Функциональные нарушения сна"
     else:
-        result_text = (
-            "🔴 *Высокий риск хронического нарушения сна*\n\n"
-            "Сон, вероятно, не даёт полноценного восстановления.\n\n"
-            "Это может отражаться на настроении, энергии и устойчивости к стрессу.\n"
-            "Рекомендуется внимательное отношение к режиму сна."
-        )
+        level = "🔴 Высокий риск хронического нарушения"
 
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     keyboard.add(
-        types.InlineKeyboardButton("🔍 Разбор параметров сна", callback_data="details_menu"),
-        types.InlineKeyboardButton("🌙 Что можно улучшить", callback_data="improve_sleep"),
-        types.InlineKeyboardButton("🔁 Повторить тест через 7 дней", callback_data="repeat_test")
+        types.InlineKeyboardButton("🔍 Разбор параметров сна", callback_data="details"),
+        types.InlineKeyboardButton("🌙 Что можно улучшить", callback_data="improve"),
+        types.InlineKeyboardButton("🔁 Пройти тест снова", callback_data="start_test"),
     )
 
     await callback.message.answer(
         f"🧠 *Результат теста сна*\n\n"
-        f"{result_text}\n\n"
-        "ℹ️ Это не диагноз, а ориентир для понимания состояния сна.",
+        f"{level}\n\n"
+        "ℹ️ Это ориентир, а не диагноз.",
         reply_markup=keyboard,
         parse_mode="Markdown"
     )
 
-    await callback.answer()
     await state.finish()
-
-# ======================
-# FINISH TEST
-# ======================
-
-    keyboard = types.InlineKeyboardMarkup(row_width=1)
-    keyboard.add(
-        types.InlineKeyboardButton("📊 Пояснить результат", callback_data="explain_result"),
-        types.InlineKeyboardButton("🌙 Что можно улучшить", callback_data="improve_sleep"),
-        types.InlineKeyboardButton("📘 Читать канал", url=CHANNEL_URL),
-    )
-
-    await callback.message.answer(
-        f"🧠 *Результат теста*\n\n{result}\n\n"
-        "Это ориентир, а не диагноз.\n"
-        "Выбери следующий шаг 👇",
-        reply_markup=keyboard,
-        parse_mode="Markdown"
-    )
+    await callback.answer()
 
 
 # ======================
-# EXPLAIN RESULT
+# EXTRA
 # ======================
-@dp.callback_query_handler(lambda c: c.data == "explain_result")
-async def explain_result(callback: types.CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    level = data.get("result_level")
-
-    explanations = {
-        "green": "🟢 Сон выглядит стабильным.\n\nНервная система сохраняет способность к восстановлению.",
-        "yellow": "🟡 Возможна накопленная усталость.\n\nЧасто связана с режимом и стрессом.",
-        "orange": "🟠 Сон может быть поверхностным.\n\nДаже при нормальной длительности восстановление снижено.",
-        "red": "🔴 Сон, вероятно, не выполняет полноценную восстановительную функцию.",
-    }
-
+@dp.callback_query_handler(lambda c: c.data == "improve")
+async def improve(callback: types.CallbackQuery):
     await callback.answer()
     await callback.message.answer(
-        explanations.get(level, "Нет данных"),
-        parse_mode="Markdown"
-    )
-
-
-# ======================
-# IMPROVE SLEEP
-# ======================
-@dp.callback_query_handler(lambda c: c.data == "improve_sleep")
-async def improve_sleep(callback: types.CallbackQuery):
-    await callback.answer()
-    await callback.message.answer(
-        "🌙 *Что можно улучшить уже сегодня:*\n\n"
-        "• 🕰 стабильное время отхода ко сну\n"
-        "• 📵 меньше стимулов за 60 минут до сна\n"
-        "• ☀️ утренний свет и движение\n\n"
-        "Даже небольшие изменения улучшают сон.",
+        "🌙 *Что улучшает сон уже сегодня:*\n\n"
+        "• 🕰 стабильный режим\n"
+        "• 📵 без экранов за 60 мин\n"
+        "• ☀️ утренний свет\n"
+        "• 🚶 движение днём",
         parse_mode="Markdown"
     )
 
